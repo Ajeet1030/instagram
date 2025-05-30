@@ -1,0 +1,92 @@
+import speech_recognition as sr
+import pyttsx3
+import pywhatkit
+import datetime
+import wikipedia
+import pyjokes
+import os
+import platform
+import sys
+import openai
+
+# Platform detection
+is_android = "termux" in sys.executable or "android" in platform.platform().lower()
+
+# ChatGPT API Key (replace with your own)
+openai.api_key = "your_openai_api_key"
+
+# Voice engine
+engine = pyttsx3.init()
+engine.setProperty('rate', 150)
+
+def speak(text):
+    print("Assistant:", text)
+    engine.say(text)
+    engine.runAndWait()
+
+def listen():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        r.adjust_for_ambient_noise(source)
+        audio = r.listen(source)
+    try:
+        command = r.recognize_google(audio, language='hi-IN')
+        return command.lower()
+    except:
+        return ""
+
+def chatgpt_response(question):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": question}]
+        )
+        answer = response.choices[0].message.content.strip()
+        return answer
+    except:
+        return "ChatGPT se jawab nahi mil paya."
+
+def run_assistant():
+    command = listen()
+    if not command:
+        speak("Mujhe sunai nahi diya.")
+        return
+
+    if 'hello' in command or 'namaste' in command:
+        speak("Namaste! Main aapki madad ke liye tayyar hoon.")
+    elif 'time' in command or 'samay' in command:
+        time = datetime.datetime.now().strftime('%I:%M %p')
+        speak(f"Abhi ka samay hai {time}")
+    elif 'play' in command or 'chalao' in command:
+        song = command.replace('play', '').replace('chalao', '')
+        speak(f"{song} chala raha hoon YouTube par")
+        pywhatkit.playonyt(song)
+    elif 'who is' in command or 'kaun hai' in command:
+        person = command.replace('who is', '').replace('kaun hai', '')
+        info = wikipedia.summary(person, sentences=2)
+        speak(info)
+    elif 'joke' in command or 'majak' in command:
+        joke = pyjokes.get_joke()
+        speak(joke)
+    elif 'open notepad' in command:
+        if not is_android:
+            os.system('notepad.exe')
+        else:
+            speak("Notepad Android par available nahi hai.")
+    elif 'screenshot' in command and not is_android:
+        import pyautogui
+        pyautogui.screenshot("screenshot.png")
+        speak("Screenshot le liya gaya.")
+    elif 'question' in command or 'sawal' in command:
+        speak("Apna sawal poochhiye...")
+        user_question = listen()
+        reply = chatgpt_response(user_question)
+        speak(reply)
+    else:
+        speak("Maaf kijiye, mujhe samajh nahi aaya.")
+
+# Start
+speak("Voice assistant tayyar hai. Aap bol sakte hain.")
+while True:
+    run_assistant()
